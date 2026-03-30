@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"log"
 	"os"
 
@@ -19,28 +20,19 @@ func main() {
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath("./config")
 
-	// viper.AutomaticEnv()
-	// viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-	// if err := viper.ReadInConfig(); err != nil {
-	// 	log.Fatalf("error from reading config file: %v", err)
-	// }
-
-	// configData := viper.AllSettings()
-	configFile, err := os.ReadFile("./config/config.yml")
-	if err != nil {
+	if configFile, err := os.ReadFile("./config/config.yml"); err != nil {
 		log.Fatalf("error from reading config file: %v", err)
+	} else {
+		expandedConfig := os.ExpandEnv(string(configFile))
+		viper.ReadConfig(bytes.NewBufferString(expandedConfig))
 	}
-	expandedConfig := os.ExpandEnv(string(configFile))
 
-	viper.SetConfigType("yaml")
-	viper.ReadConfig(bytes.NewBufferString(expandedConfig))
+	log.Println("server start at port:", viper.GetInt("app.port"))
 
-	// var cfg config.AppConfig
-	// if err := viper.Unmarshal(&cfg); err != nil {
-	// 	log.Fatalf("error from unmarshalling config: %v", err)
-	// }
-	// log.Printf("config loaded: %+v", cfg)
-	log.Println("server start")
-	log.Printf("app name: %s", viper.GetString("app.name"))
-	log.Printf("config: %+v", viper.AllSettings())
+	// log
+	if configJSON, err := json.MarshalIndent(viper.AllSettings(), "", "  "); err != nil {
+		log.Fatalf("error from marshalling config: %v", err)
+	} else {
+		log.Printf("config:\n%s", string(configJSON))
+	}
 }

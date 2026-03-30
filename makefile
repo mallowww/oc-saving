@@ -1,10 +1,12 @@
 .PHONY: docker-up tidy run
-
+# backend cmd
 tidy:
 	cd backend && go mod tidy
 
 run:
 	cd backend && go run main.go
+
+# frontend cmd
 
 # docker
 docker-up:
