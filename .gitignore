@@ -1,2 +1,6 @@
 # for my debug + thinking only
 learn-doc
+
+# env, env dev incase of sensitive files
+# backend/config/.env
+backend/config/.env.dev

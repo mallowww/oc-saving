@@ -1,0 +1,30 @@
+app:
+  name: "oc-saving"
+  port: 8080
+  namespace: "orches"
+
+log:
+  env: "dev"
+  level: "debug"
+
+database:
+  host: ${DB_HOST}
+  port: ${DB_PORT}
+  user: ${DB_USER}
+  password: ${DB_PASSWORD}
+  dbname: ${DB_NAME}
+  sslmode: "disable"
+
+redis:
+  host: ${REDIS_HOST}
+  port: ${REDIS_PORT}
+  password: ${REDIS_PASSWORD}
+  db: 0
+
+kafka:
+  bootstrapServers: ${KAFKA_BROKER}
+  group_id: "oc-saving-group"
+  auth: false
+  maxWorkers: 10
+  topic:
+    name: "saving-events"
