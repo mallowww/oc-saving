@@ -1,0 +1,147 @@
+version: '3.8'
+
+services:
+  # Postgresql
+  postgres:
+    container_name: saving-app-postgres
+    image: postgres:16-alpine
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data 
+      - ./initdb:/docker-entrypoint-initdb.d
+    environment:
+      TZ: Asia/Bangkok
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+      POSTGRES_DB: saving_app
+    ports:
+      - '5432:5432'
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - saving-app-network
+
+  # Redis
+  redis:
+    container_name: saving-app-redis
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - saving-app-network
+
+  # Zookeeper
+  zookeeper:
+    container_name: saving-app-zookeeper
+    image: confluentinc/cp-zookeeper:7.5.0
+    restart: unless-stopped
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - saving-app-network
+
+  # Kafka
+  kafka:
+    container_name: saving-app-kafka
+    image: confluentinc/cp-kafka:7.5.0
+    restart: unless-stopped
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      KAFKA_LOG_RETENTION_HOURS: 168
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - saving-app-network
+
+  # Kafka UI
+  kafka-ui:
+    container_name: saving-app-kafka-ui
+    image: provectuslabs/kafka-ui:latest
+    restart: unless-stopped
+    depends_on:
+      - kafka
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    networks:
+      - saving-app-network
+
+  # Adminer (db ui)
+  adminer:
+    container_name: saving-app-adminer
+    image: adminer:latest
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    networks:
+      - saving-app-network
+
+  # Redis commander
+  redis-commander:
+    container_name: saving-app-redis-commander
+    image: rediscommander/redis-commander:latest
+    restart: unless-stopped
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    ports:
+      - "8082:8081"
+    networks:
+      - saving-app-network
+
+  # Wiremock
+  wiremock:
+    container_name: saving-app-wiremock
+    image: wiremock/wiremock:3.3.1
+    restart: unless-stopped
+    ports:
+      - "8083:8080"
+    volumes:
+      - ./wiremock:/home/wiremock
+    command:
+      - --verbose
+      - --global-response-templating
+    networks:
+      - saving-app-network
+
+networks:
+  saving-app-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  kafka_data:
+    driver: local
