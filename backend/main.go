@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"orches-saving/tracing"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -100,6 +102,19 @@ func startServer() error {
 }
 
 func gracefulShutdown(server *http.Server) error {
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	log.Println("shutting down server")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(ctx); err != nil {
+		return fmt.Errorf("server force to shutdown: %w", err)
+	}
+	log.Println("server stopped gracefully")
 	return nil
 }
 
