@@ -1,6 +1,6 @@
 app:
   name: "oc-saving"
-  port: 8080
+  port: 3000
   namespace: "orches"
 
 log:
